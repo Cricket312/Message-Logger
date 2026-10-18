@@ -242,13 +242,12 @@ function decorateLoggerRows(packet, engine, processColor) {
         // Android's message row supports a red background and left gutter.
         if (deleted) {
             output.backgroundHighlight = { backgroundColor: color("#ed424529"), gutterColor: color("#ed4245") };
-            output.message.edited = "(deleted · local copy)";
+            // Discord adds parentheses around this label itself.
+            output.message.edited = "deleted";
         } else {
-            output.message.edited = "(edited · " + entry.editCount + " saved)";
+            output.message.edited = "edited · " + entry.editCount + " saved";
         }
         if (Array.isArray(message.content)) {
-            const additions = [];
-            if (deleted) additions.push({ type: "text", content: "[Deleted message · local copy]\n" });
             // Keep the latest message intact. Earlier versions follow it.
             const tail = [];
             if (edited) {
@@ -260,7 +259,7 @@ function decorateLoggerRows(packet, engine, processColor) {
                 });
                 tail.push({ type: "text", content: "\n[Full history: long-press → Message history, or /mlog]" });
             }
-            output.message.content = additions.concat(message.content, tail);
+            output.message.content = message.content.concat(tail);
         }
         count += 1;
         return output;
