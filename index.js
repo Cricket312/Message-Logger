@@ -538,7 +538,15 @@ function createClassicPlugin(api) {
     }
     function openHistory(channelId, messageId) {
         try {
-            common.navigation.push("BUNNY_CUSTOM_PAGE", {
+            // Match Classic's settings navigation (wrapOnPress). The separate
+            // common.navigation.push API expects a component, not a route name.
+            const refs = safeFind("findByProps", "getRootNavigationRef");
+            const navigation = refs?.getRootNavigationRef?.();
+            if (!active || !ui || typeof navigation?.navigate !== "function"
+                || (typeof navigation.isReady === "function" && !navigation.isReady())) {
+                throw new Error("The root navigator is not ready");
+            }
+            navigation.navigate("BUNNY_CUSTOM_PAGE", {
                 title: "Message history",
                 render: () => React.createElement(ui.History, { channelId, messageId })
             });
