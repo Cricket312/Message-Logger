@@ -1,0 +1,15 @@
+{
+  "name": "Local Message Logger",
+  "description": "Classic beta: retain deleted messages, show edit history, and browse local DM/server logs. No remote logging.",
+  "authors": [
+    {
+      "name": "Custom build"
+    }
+  ],
+  "main": "index.js",
+  "version": "0.1.0",
+  "vendetta": {
+    "icon": "ic_message"
+  },
+  "hash": "bf1d14cf2fdaaf243b39ec2cff3be7f143e1152099b849b5c43564ea0b78b7df"
+}
