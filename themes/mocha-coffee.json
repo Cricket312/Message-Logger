@@ -1,0 +1,237 @@
+{
+  "name": "Mocha Coffee",
+  "description": "Warm coffee-brown colors with customizable accent and optional wallpaper",
+  "authors": [
+    {
+      "name": "Custom theme"
+    }
+  ],
+  "semanticColors": {
+    "ANDROID_RIPPLE": [
+      "#B97A45",
+      "#B97A45"
+    ],
+    "BACKGROUND_ACCENT": [
+      "#B97A45",
+      "#B97A45"
+    ],
+    "BACKGROUND_PRIMARY": [
+      "#1B1612",
+      "#1B1612"
+    ],
+    "BACKGROUND_SECONDARY": [
+      "#241C17",
+      "#241C17"
+    ],
+    "BACKGROUND_SECONDARY_ALT": [
+      "#33261E",
+      "#33261E"
+    ],
+    "BACKGROUND_TERTIARY": [
+      "#1B1612",
+      "#1B1612"
+    ],
+    "BACKGROUND_FLOATING": [
+      "#241C17",
+      "#241C17"
+    ],
+    "BACKGROUND_MOBILE_PRIMARY": [
+      "#1B1612",
+      "#1B1612"
+    ],
+    "BACKGROUND_MOBILE_SECONDARY": [
+      "#241C17",
+      "#241C17"
+    ],
+    "BACKGROUND_NESTED_FLOATING": [
+      "#241C17",
+      "#241C17"
+    ],
+    "BACKGROUND_MESSAGE_HOVER": [
+      "#33261E",
+      "#33261E"
+    ],
+    "BACKGROUND_MODIFIER_HOVER": [
+      "#33261E",
+      "#33261E"
+    ],
+    "BACKGROUND_MODIFIER_ACTIVE": [
+      "#33261E",
+      "#33261E"
+    ],
+    "BACKGROUND_MODIFIER_SELECTED": [
+      "#33261E",
+      "#33261E"
+    ],
+    "BACKGROUND_MODIFIER_ACCENT": [
+      "#33261E",
+      "#33261E"
+    ],
+    "BG_BASE_PRIMARY": [
+      "#1B1612",
+      "#1B1612"
+    ],
+    "BG_BASE_SECONDARY": [
+      "#241C17",
+      "#241C17"
+    ],
+    "BG_BASE_TERTIARY": [
+      "#33261E",
+      "#33261E"
+    ],
+    "CARD_PRIMARY_BG": [
+      "#241C17",
+      "#241C17"
+    ],
+    "CARD_SECONDARY_BG": [
+      "#33261E",
+      "#33261E"
+    ],
+    "CHAT_BACKGROUND": [
+      "#1B1612",
+      "#1B1612"
+    ],
+    "CHANNELTEXTAREA_BACKGROUND": [
+      "#33261E",
+      "#33261E"
+    ],
+    "INPUT_BACKGROUND": [
+      "#33261E",
+      "#33261E"
+    ],
+    "KEYBOARD": [
+      "#1B1612",
+      "#1B1612"
+    ],
+    "REDESIGN_CHAT_INPUT_BACKGROUND": [
+      "#33261E",
+      "#33261E"
+    ],
+    "REDESIGN_ACTIVITY_CARD_BACKGROUND": [
+      "#33261E",
+      "#33261E"
+    ],
+    "REDESIGN_BUTTON_SECONDARY_BACKGROUND": [
+      "#33261E",
+      "#33261E"
+    ],
+    "REDESIGN_BUTTON_SECONDARY_BORDER": [
+      "#241C17",
+      "#241C17"
+    ],
+    "REDESIGN_BUTTON_TERTIARY_BACKGROUND": [
+      "#241C17",
+      "#241C17"
+    ],
+    "REDESIGN_BUTTON_PRIMARY_PRESSED_BACKGROUND": [
+      "#B97A45",
+      "#B97A45"
+    ],
+    "HEADER_PRIMARY": [
+      "#F1E2D0",
+      "#F1E2D0"
+    ],
+    "HEADER_SECONDARY": [
+      "#B9A38F",
+      "#B9A38F"
+    ],
+    "TEXT_NORMAL": [
+      "#F1E2D0",
+      "#F1E2D0"
+    ],
+    "TEXT_PRIMARY": [
+      "#F1E2D0",
+      "#F1E2D0"
+    ],
+    "TEXT_MUTED": [
+      "#B9A38F",
+      "#B9A38F"
+    ],
+    "TEXT_LINK": [
+      "#D8A56D",
+      "#D8A56D"
+    ],
+    "CHANNELS_DEFAULT": [
+      "#B9A38F",
+      "#B9A38F"
+    ],
+    "CHANNEL_ICON": [
+      "#B9A38F",
+      "#B9A38F"
+    ],
+    "REDESIGN_CHANNEL_CATEGORY_NAME_TEXT": [
+      "#F1E2D0",
+      "#F1E2D0"
+    ],
+    "REDESIGN_CHANNEL_NAME_TEXT": [
+      "#F1E2D0",
+      "#F1E2D0"
+    ],
+    "INTERACTIVE_NORMAL": [
+      "#B9A38F",
+      "#B9A38F"
+    ],
+    "INTERACTIVE_HOVER": [
+      "#D8A56D",
+      "#D8A56D"
+    ],
+    "INTERACTIVE_ACTIVE": [
+      "#F1E2D0",
+      "#F1E2D0"
+    ],
+    "INTERACTIVE_MUTED": [
+      "#B9A38F",
+      "#B9A38F"
+    ],
+    "CONTROL_BRAND_FOREGROUND": [
+      "#D8A56D",
+      "#D8A56D"
+    ],
+    "THREAD_CHANNEL_SPINE": [
+      "#B9A38F",
+      "#B9A38F"
+    ],
+    "SPOILER_HIDDEN_BACKGROUND": [
+      "#33261E",
+      "#33261E"
+    ],
+    "SPOILER_REVEALED_BACKGROUND": [
+      "#241C17",
+      "#241C17"
+    ]
+  },
+  "rawColors": {
+    "BLACK": "#1B1612",
+    "WHITE": "#F1E2D0",
+    "WHITE_500": "#F1E2D0",
+    "PRIMARY_100": "#F1E2D0",
+    "PRIMARY_200": "#F1E2D0",
+    "PRIMARY_300": "#B9A38F",
+    "PRIMARY_330": "#B9A38F",
+    "PRIMARY_360": "#B9A38F",
+    "PRIMARY_400": "#B9A38F",
+    "PRIMARY_460": "#33261E",
+    "PRIMARY_500": "#B97A45",
+    "PRIMARY_600": "#33261E",
+    "PRIMARY_630": "#241C17",
+    "PRIMARY_660": "#241C17",
+    "PRIMARY_700": "#1B1612",
+    "PRIMARY_800": "#1B1612",
+    "PLUM_24": "#1B1612",
+    "PLUM_10": "#B9A38F",
+    "PLUM_15": "#33261E",
+    "PLUM_16": "#33261E",
+    "PLUM_17": "#241C17",
+    "PLUM_18": "#241C17",
+    "PLUM_19": "#1B1612",
+    "PLUM_20": "#1B1612",
+    "PLUM_3": "#F1E2D0",
+    "PLUM_6": "#B97A45",
+    "BRAND_260": "#D8A56D",
+    "BRAND_360": "#B97A45",
+    "BRAND_500": "#B97A45",
+    "BRAND_560": "#B97A45",
+    "BLUE_345": "#D8A56D"
+  },
+  "spec": 2
+}
