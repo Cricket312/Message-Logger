@@ -1,308 +1,238 @@
 (function () {
   "use strict";
-  // ==============================================
-  // PERSONALIZE THESE DEFAULTS
-  // ==============================================
+  // Rosé Pine Everywhere V4 — EXPERIMENTAL / REVERSIBLE
+  // This plugin only inspects already-initialized modules; it never sends logs anywhere.
   const CONFIG = {
     wallpaperUrl: "https://raw.githubusercontent.com/rose-pine/discord-mobile/main/Assets/V06yN.png",
     overlayOpacity: 0.35,
-    imageBlur: 0,
-    verboseLogging: false
+    imageBlur: 0
   };
-  // ==============================================
-
-  const TARGETS = new Set([
+  const TARGETS = [
     "GuildChannelList", "GuildChannelListConnected", "GuildChannelListScreen",
-    "GuildChannels", "GuildChannelsConnected", "GuildChannelsScreen",
-    "ChannelList", "ChannelListConnected", "ChannelDrawer", "ChannelDrawerContent",
+    "GuildChannelListContainer", "GuildChannels", "GuildChannelsScreen",
+    "GuildChannelsContainer", "GuildChannelsView", "ChannelList",
+    "ChannelListConnected", "ChannelDrawer", "ChannelDrawerContent",
     "ChannelsList", "ServerChannelList", "GuildSidebar", "GuildsBar",
-    "SettingsScreen", "SettingsOverview", "UserSettingsOverview", "SettingsNavigator",
-    "GuildChannelsView", "GuildChannelsContainer", "GuildChannelListContainer"
-  ]);
-
-  let enabled = false;
-  let api = null;
-  let React = null;
-  let RN = null;
-  const unpatches = [];
-  const patchedKeys = new Set();
-  const stats = {
-    registry: "Not checked",
-    total: 0,
-    initialized: 0,
-    components: 0,
-    matches: [],
-    candidates: [],
-    errors: []
+    "SettingsScreen", "SettingsOverview", "UserSettingsOverview"
+  ];
+  const targetSet = new Set(TARGETS);
+  const state = {
+    api: null, React: null, RN: null, live: false,
+    unpatches: [], identities: new Set(), targetsPatched: [],
+    patchCalls: 0, overlayRenders: 0,
+    scan: { registry: "Not scanned", initialized: 0, examined: 0, names: [],
+      finder: "Not checked", finderMatches: [], errors: [] }
   };
-
-  function log(message, error) {
-    try { console.log("[RosePineEverywhere V3]", message, error || ""); } catch (_) {}
+  function logger(s, e) { try { console.log("[RosePineEverywhere V4]", s, e || ""); } catch (_) {} }
+  function storage(key, fallback) {
+    try { return state.api.plugin.storage[key] === undefined ? fallback : state.api.plugin.storage[key]; }
+    catch (_) { return fallback; }
   }
-  function setting(name, fallback) {
+  function imageUrl() {
+    const s = storage("wallpaperUrl", CONFIG.wallpaperUrl);
+    return typeof s === "string" && /^https:\/\//i.test(s) ? s : CONFIG.wallpaperUrl;
+  }
+  function overlay() {
+    const n = Number(storage("overlayOpacity", CONFIG.overlayOpacity));
+    return Number.isFinite(n) ? Math.max(0, Math.min(0.85, n)) : 0.35;
+  }
+  function wrap(result) {
+    if (!state.live || !state.React || !state.RN || !state.React.isValidElement(result)) return result;
+    const R = state.React, RN = state.RN;
     try {
-      const storage = api && api.plugin && api.plugin.storage;
-      return storage && storage[name] !== undefined ? storage[name] : fallback;
-    } catch (_) { return fallback; }
-  }
-  function wallpaperUrl() {
-    const url = setting("wallpaperUrl", CONFIG.wallpaperUrl);
-    return typeof url === "string" && /^https:\/\//i.test(url.trim()) ? url.trim() : CONFIG.wallpaperUrl;
-  }
-  function overlayOpacity() {
-    const value = Number(setting("overlayOpacity", CONFIG.overlayOpacity));
-    return Number.isFinite(value) ? Math.max(0, Math.min(0.85, value)) : CONFIG.overlayOpacity;
-  }
-  function makeTransparent(element) {
-    if (!React.isValidElement(element) || !element.props || element.props.style == null) return element;
-    try {
-      return React.cloneElement(element, { style: [element.props.style, { backgroundColor: "transparent" }] });
-    } catch (_) { return element; }
-  }
-  function wallpaperBehind(element) {
-    if (!enabled || !React || !RN || !RN.ImageBackground || !React.isValidElement(element)) return element;
-    try {
-      return React.createElement(RN.ImageBackground, {
-        source: { uri: wallpaperUrl() },
-        style: { flex: 1 },
-        imageStyle: { opacity: 1 },
-        resizeMode: "cover",
-        blurRadius: CONFIG.imageBlur,
+      const child = result.props && result.props.style != null
+        ? R.cloneElement(result, { style: [result.props.style, { backgroundColor: "transparent" }] })
+        : result;
+      state.overlayRenders++;
+      return R.createElement(RN.ImageBackground, {
+        source: { uri: imageUrl() }, style: { flex: 1 }, imageStyle: { opacity: 1 },
+        resizeMode: "cover", blurRadius: CONFIG.imageBlur, pointerEvents: "box-none"
+      }, R.createElement(RN.View, {
+        style: { flex: 1, backgroundColor: "rgba(25,23,36," + overlay() + ")" },
         pointerEvents: "box-none"
-      }, React.createElement(RN.View, {
-        style: { flex: 1, backgroundColor: "rgba(25,23,36," + overlayOpacity() + ")" },
-        pointerEvents: "box-none"
-      }, makeTransparent(element)));
-    } catch (err) {
-      if (CONFIG.verboseLogging) log("Wallpaper render failed", err);
-      return element;
-    }
+      }, child));
+    } catch (err) { state.scan.errors.push("Wallpaper render: " + String(err).slice(0, 110)); return result; }
   }
-
-  function functionName(value) {
+  function getName(value) {
     try {
-      if (!value) return "";
-      if (typeof value === "function") return value.displayName || value.name || "";
+      if (value == null) return "";
+      if (typeof value.displayName === "string") return value.displayName;
+      if (typeof value === "function") return value.name || "";
       if (typeof value === "object") {
-        if (typeof value.displayName === "string") return value.displayName;
-        if (typeof value.type === "function") return functionName(value.type);
-        if (typeof value.render === "function") return functionName(value.render);
+        if (typeof value.type === "function") return getName(value.type);
+        if (typeof value.render === "function") return getName(value.render);
       }
     } catch (_) {}
     return "";
   }
-
-  // Vendetta/Bunny exposes its Metro registry in different places depending
-  // on the loaded bundle. Original v1 only checked vendetta.metro.modules.
+  function safeName(name) {
+    return typeof name === "string" && name.length < 90 && /^[A-Z]/.test(name) &&
+      /(guild|channel|drawer|navigation|settings|screen|sidebar|panel)/i.test(name) &&
+      !/^(get|set|should|handle|create|update|transition|default|use|open|close)/i.test(name);
+  }
+  function patch(parent, key, name, id) {
+    const identity = String(id) + ":" + key + ":" + name;
+    if (state.identities.has(identity) || !parent || typeof parent[key] !== "function") return;
+    try {
+      // Classic Revenge/Vendetta (spitroast) signature: after(methodName, parent, callback)
+      const undo = state.api.patcher.after(key, parent, function (_args, result) {
+        state.patchCalls++;
+        return wrap(result);
+      });
+      if (typeof undo === "function") {
+        state.unpatches.push(undo);
+        state.identities.add(identity);
+        state.targetsPatched.push(name);
+      }
+    } catch (error) { state.scan.errors.push(name + ": " + String(error).slice(0, 100)); }
+  }
   function getRegistry() {
     const candidates = [];
     try { candidates.push(["globalThis.modules", globalThis.modules]); } catch (_) {}
-    try { candidates.push(["vendetta.metro.modules", api.metro.modules]); } catch (_) {}
-    try { candidates.push(["globalThis.window.modules", globalThis.window && globalThis.window.modules]); } catch (_) {}
-    for (const [name, registry] of candidates) {
+    try { candidates.push(["vendetta.metro.modules", state.api.metro.modules]); } catch (_) {}
+    for (const [name, value] of candidates) {
+      if (!value) continue;
       try {
-        if (registry && (typeof registry === "object" || registry instanceof Map)) {
-          const size = registry instanceof Map ? registry.size : Object.keys(registry).length;
-          if (size > 0) return { name, registry, size };
-        }
+        const size = value instanceof Map ? value.size : Object.keys(value).length;
+        if (size) return { name, value, size };
       } catch (_) {}
     }
     return null;
   }
-
-  function patch(parent, key, name, id) {
-    if (!enabled || !api || !api.patcher || typeof api.patcher.after !== "function") return;
-    const idKey = String(id) + ":" + key + ":" + name;
-    if (patchedKeys.has(idKey)) return;
-    try {
-      if (!parent || typeof parent[key] !== "function") return;
-      const undo = api.patcher.after(key, parent, function (_args, result) {
-        return wallpaperBehind(result);
-      });
-      if (typeof undo === "function") {
-        unpatches.push(undo);
-        patchedKeys.add(idKey);
-        stats.matches.push(name);
-      }
-    } catch (e) {
-      stats.errors.push(name + ": " + String(e).slice(0, 90));
-    }
-  }
-
-  function examineFunction(parent, key, id) {
-    let fn;
-    try { fn = parent[key]; } catch (_) { return; }
-    if (!fn) return;
-    const name = functionName(fn);
-    if (!name) return;
-    stats.components++;
-    if (/^[A-Z]/.test(name) && /(channel|guild|sidebar|drawer|settings|screen|panel|list|navigation)/i.test(name)) {
-      if (stats.candidates.indexOf(name) === -1 && stats.candidates.length < 70) stats.candidates.push(name);
-    }
-    if (TARGETS.has(name)) {
-      patch(parent, key, name, id);
-    }
-    // React.memo and React.forwardRef may wrap the real screen function.
-    try {
-      if (fn && typeof fn === "object" && typeof fn.type === "function") {
-        const innerName = functionName(fn.type);
-        if (TARGETS.has(innerName)) patch(fn, "type", innerName, id);
-      }
-      if (fn && typeof fn === "object" && typeof fn.render === "function") {
-        const renderName = functionName(fn.render);
-        if (TARGETS.has(renderName)) patch(fn, "render", renderName, id);
-      }
-    } catch (_) {}
-  }
-
   function scan() {
-    stats.total = 0;
-    stats.initialized = 0;
-    stats.components = 0;
-    stats.candidates = [];
-    stats.errors = [];
-    stats.matches = Array.from(patchedKeys).map(k => k.split(":").slice(2).join(":"));
-    const found = getRegistry();
-    if (!found) {
-      stats.registry = "Unavailable (neither globalThis.modules nor vendetta.metro.modules)";
-      log("Metro registry not exposed. No patches applied.");
-      return;
-    }
-    stats.registry = found.name;
-    stats.total = found.size;
-    const entries = found.registry instanceof Map ? found.registry.entries() : Object.entries(found.registry);
+    const rec = state.scan;
+    rec.registry = "Unavailable"; rec.initialized = 0; rec.examined = 0;
+    rec.names = []; rec.finderMatches = []; rec.errors = [];
+    const nameSet = new Set();
+    const registry = getRegistry();
+    if (!registry) { rec.errors.push("Metro registry not available"); return; }
+    rec.registry = registry.name;
+    const entries = registry.value instanceof Map ? registry.value.entries() : Object.entries(registry.value);
     for (const [id, entry] of entries) {
-      let exports;
+      let exported;
       try {
-        if (!entry || entry.isInitialized === false) continue;
-        exports = entry.publicModule && entry.publicModule.exports;
+        if (!entry || entry.isInitialized === false || !entry.publicModule) continue;
+        exported = entry.publicModule.exports;
       } catch (_) { continue; }
-      if (!exports) continue;
-      stats.initialized++;
-      if (typeof exports === "object") {
-        for (const key of ["default", "render", "type"]) examineFunction(exports, key, id);
-        // Some modules export named components instead of a default.
-        try {
-          const keys = Object.keys(exports);
-          if (keys.length <= 35) for (const key of keys) {
-            if (key !== "default" && key !== "render" && key !== "type") examineFunction(exports, key, id);
+      if (!exported) continue;
+      rec.initialized++;
+      const seen = new Set();
+      function inspect(value, owner, key, depth) {
+        if (!value || depth > 3 || seen.has(value)) return;
+        if (typeof value !== "function" && typeof value !== "object") return;
+        seen.add(value);
+        const name = getName(value);
+        if (name) {
+          rec.examined++;
+          if (safeName(name) && nameSet.size < 180) nameSet.add(name);
+          if (targetSet.has(name) && typeof value === "function") patch(owner, key, name, id);
+        }
+        // Crucial V4 fix: inspect memo/forwardRef internals and their export holders.
+        // Avoid traversing arbitrary Discord objects or requiring any new modules.
+        if (typeof value === "object" && depth < 3) {
+          try { if (value.type) inspect(value.type, value, "type", depth + 1); } catch (_) {}
+          try { if (value.render) inspect(value.render, value, "render", depth + 1); } catch (_) {}
+          try { if (value.default) inspect(value.default, value, "default", depth + 1); } catch (_) {}
+        }
+      }
+      try {
+        if (typeof exported === "function") inspect(exported, entry.publicModule, "exports", 0);
+        else if (typeof exported === "object") {
+          const keys = Object.keys(exported);
+          if (keys.length < 50) for (const k of keys) {
+            let child;
+            try { child = exported[k]; } catch (_) { continue; }
+            if (typeof child === "function" || (child && typeof child === "object" && (child.type || child.render))) {
+              inspect(child, exported, k, 0);
+            }
           }
-        } catch (_) {}
+        }
+      } catch (_) {}
+    }
+    rec.names = [...nameSet].sort((a,b)=>{
+      const rank = s => /channel/i.test(s) ? 0 : /drawer|sidebar/i.test(s) ? 1 : /guild/i.test(s) ? 2 : 3;
+      return rank(a) - rank(b) || a.localeCompare(b);
+    });
+    // The Classic finder can locate React memo wrappers not visible via name lookup.
+    const metro = state.api && state.api.metro;
+    const finder = metro && metro.findByTypeNameAll;
+    rec.finder = typeof finder === "function" ? "findByTypeNameAll available" : "findByTypeNameAll unavailable";
+    if (typeof finder === "function") {
+      for (const query of ["GuildsBar", "GuildsBarGuild", "GuildChannelList", "ChannelDrawer", "ChannelList", "GuildSidebar"]) {
+        try {
+          const found = finder(query);
+          const n = Array.isArray(found) ? found.length : found && typeof found[Symbol.iterator] === "function" ? [...found].length : found ? 1 : 0;
+          if (n > 0) rec.finderMatches.push(query + " (" + n + ")");
+        } catch (e) { rec.errors.push("Finder " + query + ": " + String(e).slice(0, 70)); }
       }
     }
-    log("Registry " + stats.registry + ", " + stats.initialized + " initialized, " + stats.matches.length + " patches.");
+    logger("Scan: " + rec.initialized + " initialized, " + state.targetsPatched.length + " patches, " + rec.finderMatches.length + " finder types");
   }
-
-  // V3: Use TouchableOpacity (if exposed by Discord's React Native build)
-  // and display direct feedback for every tap. Previously the Scan and Save
-  // buttons could appear broken because no status message was rendered.
   function Settings() {
-    const [url, setUrl] = React.useState(wallpaperUrl());
-    const [opacity, setOpacity] = React.useState(String(overlayOpacity()));
-    const [pressCount, setPressCount] = React.useState(0);
-    const [scanCount, setScanCount] = React.useState(0);
-    const [status, setStatus] = React.useState("No buttons pressed yet.");
-    const textStyle = { color: "#e0def4", fontSize: 14, marginTop: 8 };
-    const inputStyle = { backgroundColor: "#26233a", borderRadius: 8, padding: 12, marginTop: 8, color: "#e0def4" };
-    const Action = RN.TouchableOpacity || RN.Pressable;
-
-    function paragraph(key, content) {
-      return React.createElement(RN.Text, { key, selectable: true, style: textStyle }, content);
+    const R = state.React, RN = state.RN;
+    const [url, setUrl] = R.useState(imageUrl());
+    const [opacity, setOpacity] = R.useState(String(overlay()));
+    const [count, setCount] = R.useState(0);
+    const [status, setStatus] = R.useState("V4 loaded. Open a server and tap Rescan.");
+    const [showMore, setShowMore] = R.useState(false);
+    const textStyle = { color: "#e0def4", fontSize: 14, marginTop: 10 };
+    const inputStyle = { color: "#e0def4", backgroundColor: "#26233a", padding: 12, borderRadius: 9, marginTop: 8 };
+    const Touch = RN.TouchableOpacity || RN.Pressable;
+    function line(key, text) { return R.createElement(RN.Text, { key, selectable: true, style: textStyle }, text); }
+    function button(key, label, fn) {
+      return R.createElement(Touch, { key, onPress: () => { setCount(n=>n+1); try { fn(); } catch(e) { setStatus("Error: " + String(e).slice(0, 120)); } },
+        style: { backgroundColor: "#c4a7e7", padding: 14, borderRadius: 9, marginTop: 14 } },
+      R.createElement(RN.Text, { style: { color: "#191724", textAlign: "center", fontWeight: "bold" } }, label));
     }
-    function button(key, label, action) {
-      return React.createElement(Action, {
-        key,
-        accessible: true,
-        accessibilityRole: "button",
-        onPress: function () {
-          setPressCount(prev => prev + 1);
-          try { action(); }
-          catch (e) { setStatus("Button error: " + String(e).slice(0, 140)); }
-        },
-        style: { padding: 14, backgroundColor: "#c4a7e7", borderRadius: 9, marginTop: 14 }
-      }, React.createElement(RN.Text, { style: { color: "#191724", textAlign: "center", fontWeight: "bold" } }, label));
-    }
-    return React.createElement(RN.ScrollView, {
-      style: { flex: 1, backgroundColor: "#191724" },
-      contentContainerStyle: { padding: 18, paddingBottom: 80 },
-      keyboardShouldPersistTaps: "always"
-    },
-      React.createElement(RN.Text, { style: { color: "#e0def4", fontSize: 19, fontWeight: "bold" } }, "Rosé Pine Everywhere — V3 diagnostics"),
-      paragraph("feedback", "BUTTON FEEDBACK: " + status + " | Taps recorded: " + pressCount),
-      button("test", "Test buttons (should count taps)", function () {
-        setStatus("The button works. This page received your tap.");
+    return R.createElement(RN.ScrollView, { style: { flex: 1, backgroundColor: "#191724" },
+      contentContainerStyle: { padding: 18, paddingBottom: 80 }, keyboardShouldPersistTaps: "always" },
+      R.createElement(RN.Text, { style: { fontSize: 19, fontWeight: "bold", color: "#e0def4" } }, "Rosé Pine Everywhere — V4 diagnostic"),
+      line("status", status + " | Buttons pressed: " + count),
+      line("registry", "Registry: " + state.scan.registry + ", initialized: " + state.scan.initialized + ", examined: " + state.scan.examined),
+      line("patches", "Patches installed: " + state.targetsPatched.length + " | Patch calls: " + state.patchCalls + " | Wallpaper renders: " + state.overlayRenders),
+      line("finder", "Classic type finder: " + state.scan.finder),
+      line("finderMatch", "Finder matches: " + (state.scan.finderMatches.join(", ") || "NONE")),
+      line("matching", "Patched component names: " + (state.targetsPatched.join(", ") || "NONE")),
+      line("candidate", "Potential channel/screen components: " + (state.scan.names.slice(0, 18).join(", ") || "NONE")),
+      line("errors", "Errors: " + (state.scan.errors.slice(0, 3).join("; ") || "none")),
+      button("rescan", "Rescan loaded screens", () => {
+        scan(); setStatus("Rescan finished; " + state.scan.names.length + " candidate names, " + state.targetsPatched.length + " patches.");
       }),
-      paragraph("registry", "Metro registry: " + stats.registry),
-      paragraph("stats", "Registry entries: " + stats.total + " | Initialized: " + stats.initialized + " | Named components: " + stats.components),
-      paragraph("matches", "Patched screens: " + (stats.matches.join(", ") || "NONE")),
-      paragraph("candidates", "Potential screen names (not confirmed): " + (stats.candidates.slice(0, 22).join(", ") || "NONE")),
-      paragraph("errors", "Patch errors: " + (stats.errors.slice(0, 4).join("; ") || "none")),
-      button("scan", "Rescan loaded screens", function () {
-        scan();
-        setScanCount(prev => prev + 1);
-        setStatus("Scan completed. Found " + stats.matches.length + " patch(es), " + stats.candidates.length + " potential names.");
-      }),
-      paragraph("scanCount", "Manual rescans: " + scanCount),
-      paragraph("instructions", "Open the server/channel list once, then return here and tap Rescan. If patched screens stays NONE, the wallpaper is not being injected."),
-      React.createElement(RN.Text, { style: Object.assign({}, textStyle, { marginTop: 24 }) }, "Wallpaper (HTTPS URL)"),
-      React.createElement(RN.TextInput, {
-        style: inputStyle, value: url, onChangeText: setUrl,
-        autoCapitalize: "none", autoCorrect: false, multiline: true,
-        placeholderTextColor: "#908caa"
-      }),
-      paragraph("overlayLabel", "Dark overlay opacity (0.0 to 0.85)"),
-      React.createElement(RN.TextInput, {
-        style: inputStyle, value: opacity, onChangeText: setOpacity, keyboardType: "decimal-pad"
-      }),
-      button("save", "Save wallpaper settings", function () {
-        if (!/^https:\/\/\S+$/i.test(url.trim())) {
-          setStatus("Not saved: enter a complete HTTPS wallpaper URL.");
-          return;
-        }
+      button("details", showMore ? "Hide additional component names" : "Show additional component names", () => setShowMore(v=>!v)),
+      showMore ? line("more", state.scan.names.slice(18, 70).join(", ") || "No additional matches") : null,
+      line("help", "V4 finds wrapped React components. Zero installed patches means the correct screens still haven't been found. A positive patch count with zero calls means the patched export isn't being invoked."),
+      line("label-url", "Wallpaper URL (HTTPS)"),
+      R.createElement(RN.TextInput, { style: inputStyle, multiline: true, value: url, onChangeText: setUrl, autoCapitalize: "none", autoCorrect: false }),
+      line("label-opacity", "Dark overlay (0.0–0.85)"),
+      R.createElement(RN.TextInput, { style: inputStyle, value: opacity, onChangeText: setOpacity, keyboardType: "decimal-pad" }),
+      button("save", "Save wallpaper settings", () => {
+        if (!/^https:\/\/\S+$/i.test(url.trim())) { setStatus("Invalid wallpaper URL"); return; }
+        const n = Number(opacity); if (!Number.isFinite(n)) { setStatus("Overlay must be a number"); return; }
         try {
-          if (!api || !api.plugin || !api.plugin.storage) {
-            setStatus("Not saved: plugin storage is unavailable in this Revenge build.");
-            return;
-          }
-          const n = Number(opacity);
-          if (!Number.isFinite(n)) {
-            setStatus("Not saved: overlay must be a number from 0 to 0.85.");
-            return;
-          }
-          api.plugin.storage.wallpaperUrl = url.trim();
-          api.plugin.storage.overlayOpacity = Math.max(0, Math.min(0.85, n));
-          setStatus("Settings saved. Reload Revenge to apply wallpaper changes.");
-        } catch (e) {
-          setStatus("Could not save: " + String(e).slice(0, 120));
-        }
+          state.api.plugin.storage.wallpaperUrl = url.trim();
+          state.api.plugin.storage.overlayOpacity = Math.max(0, Math.min(0.85, n));
+          setStatus("Saved. Reload Revenge to apply.");
+        } catch (e) { setStatus("Storage error: " + String(e).slice(0, 90)); }
       }),
-      paragraph("disclaimer", "This is a diagnostic build. It does not guarantee channel-list wallpaper support; none of the expected screen components have been found on your build.")
+      line("disclaimer", "Experimental: no guaranteed full-app wallpaper. No account data is collected or transmitted. Disable the plugin to restore the original screens.")
     );
   }
-
   return {
     onLoad: function () {
       try {
-        api = vendetta;
-        React = api.metro && api.metro.common && api.metro.common.React || globalThis.React;
-        RN = api.metro && api.metro.common && api.metro.common.ReactNative;
-        if (!React || !RN || !RN.View || !RN.ImageBackground || !api.patcher) {
-          stats.registry = "API unavailable (React, ReactNative, or patcher missing)";
-          return;
+        state.api = vendetta;
+        state.React = vendetta.metro.common.React || globalThis.React;
+        state.RN = vendetta.metro.common.ReactNative;
+        if (!state.React || !state.RN || !state.RN.ImageBackground || !vendetta.patcher || typeof vendetta.patcher.after !== "function") {
+          state.scan.errors.push("Required Revenge Classic APIs unavailable"); return;
         }
-        enabled = true;
-        scan();
-      } catch (e) {
-        enabled = false;
-        stats.errors.push(String(e).slice(0, 160));
-        log("Initialization failed", e);
-      }
+        state.live = true; scan();
+      } catch (e) { state.live = false; state.scan.errors.push("Initialization: " + String(e).slice(0, 100)); }
     },
     onUnload: function () {
-      enabled = false;
-      while (unpatches.length) try { unpatches.pop()(); } catch (_) {}
-      patchedKeys.clear();
-      stats.matches = [];
+      state.live = false;
+      while (state.unpatches.length) try { state.unpatches.pop()(); } catch (_) {}
+      state.identities.clear(); state.targetsPatched = [];
     },
     settings: Settings
   };

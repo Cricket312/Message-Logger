@@ -1,14 +1,10 @@
 {
-  "name": "Rose Pine Everywhere (Experimental V3)",
-  "description": "Diagnostic build with verified tap feedback, rescan counters, and explicit save status. Wallpaper support remains experimental.",
+  "name": "Rose Pine Everywhere (Experimental V4)",
+  "description": "Revenge Classic screen detection experiment with memo/forwardRef inspection, type-finder checks, and patch-call counters.",
   "authors": [
-    {
-      "name": "ChatGPT"
-    }
+    {"name": "ChatGPT"}
   ],
   "main": "index.js",
-  "vendetta": {
-    "icon": "ic_image_24px"
-  },
-  "hash": "224b0ca63b667e35134660dca3d8c22f7e2c4f542210e213ebeb0c4789ac89b1"
+  "vendetta": {"icon": "ic_image_24px"},
+  "hash": "6160eb10ee203086f3ba05ec987a079bddc2bc7fb8e4b0c92f66698f6b66875b"
 }
