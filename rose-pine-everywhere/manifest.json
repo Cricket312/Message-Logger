@@ -1,7 +1,6 @@
-
 {
-  "name": "Rose Pine Everywhere (Experimental)",
-  "description": "Rose Pine wallpaper behind Discord screens.",
+  "name": "Rose Pine Everywhere (Experimental V2)",
+  "description": "Experimental wallpaper on Discord navigation screens; improved Metro registry detection and diagnostic scanning.",
   "authors": [
     {
       "name": "ChatGPT"
@@ -11,5 +10,5 @@
   "vendetta": {
     "icon": "ic_image_24px"
   },
-  "hash": "4af9e65e10dda30c957c03688c33d7ac3020fa96a58212cf7b166d3a8a4e9515"
+  "hash": "b45f1e214b6a1bb7afc3ac74ee5f51785591599f38201cafb0ad19b73663e5fc"
 }
