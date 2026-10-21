@@ -1,0 +1,14 @@
+{
+  "name": "Rose Pine Everywhere (Experimental)",
+  "description": "Attempts to add Rosé Pine wallpaper behind navigation and channel screens. Experimental: version-dependent.",
+  "authors": [
+    {
+      "name": "ChatGPT"
+    }
+  ],
+  "main": "index.js",
+  "vendetta": {
+    "icon": "ic_image_24px"
+  },
+  "hash": "4af9e65e10dda30c957c03688c33d7ac3020fa96a58212cf7b166d3a8a4e9515"
+}
