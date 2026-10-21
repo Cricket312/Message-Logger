@@ -1,6 +1,6 @@
 {
-  "name": "Rose Pine Everywhere (Experimental V2)",
-  "description": "Experimental wallpaper on Discord navigation screens; improved Metro registry detection and diagnostic scanning.",
+  "name": "Rose Pine Everywhere (Experimental V3)",
+  "description": "Diagnostic build with verified tap feedback, rescan counters, and explicit save status. Wallpaper support remains experimental.",
   "authors": [
     {
       "name": "ChatGPT"
@@ -10,5 +10,5 @@
   "vendetta": {
     "icon": "ic_image_24px"
   },
-  "hash": "b45f1e214b6a1bb7afc3ac74ee5f51785591599f38201cafb0ad19b73663e5fc"
+  "hash": "224b0ca63b667e35134660dca3d8c22f7e2c4f542210e213ebeb0c4789ac89b1"
 }

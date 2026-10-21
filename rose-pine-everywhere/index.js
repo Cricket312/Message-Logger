@@ -37,7 +37,7 @@
   };
 
   function log(message, error) {
-    try { console.log("[RosePineEverywhere V2]", message, error || ""); } catch (_) {}
+    try { console.log("[RosePineEverywhere V3]", message, error || ""); } catch (_) {}
   }
   function setting(name, fallback) {
     try {
@@ -136,8 +136,8 @@
     const name = functionName(fn);
     if (!name) return;
     stats.components++;
-    if (/(channel|guild|sidebar|drawer|settings|navigation|panel)/i.test(name)) {
-      if (stats.candidates.indexOf(name) === -1 && stats.candidates.length < 40) stats.candidates.push(name);
+    if (/^[A-Z]/.test(name) && /(channel|guild|sidebar|drawer|settings|screen|panel|list|navigation)/i.test(name)) {
+      if (stats.candidates.indexOf(name) === -1 && stats.candidates.length < 70) stats.candidates.push(name);
     }
     if (TARGETS.has(name)) {
       patch(parent, key, name, id);
@@ -193,47 +193,90 @@
     log("Registry " + stats.registry + ", " + stats.initialized + " initialized, " + stats.matches.length + " patches.");
   }
 
+  // V3: Use TouchableOpacity (if exposed by Discord's React Native build)
+  // and display direct feedback for every tap. Previously the Scan and Save
+  // buttons could appear broken because no status message was rendered.
   function Settings() {
     const [url, setUrl] = React.useState(wallpaperUrl());
     const [opacity, setOpacity] = React.useState(String(overlayOpacity()));
-    const [refresh, setRefresh] = React.useState(0);
-    const text = { color: "#e0def4", fontSize: 14, marginTop: 6 };
-    const input = { backgroundColor: "#26233a", borderRadius: 8, padding: 12, marginTop: 8, color: "#e0def4" };
-    function paragraph(key, value) {
-      return React.createElement(RN.Text, { key, selectable: true, style: text }, value);
+    const [pressCount, setPressCount] = React.useState(0);
+    const [scanCount, setScanCount] = React.useState(0);
+    const [status, setStatus] = React.useState("No buttons pressed yet.");
+    const textStyle = { color: "#e0def4", fontSize: 14, marginTop: 8 };
+    const inputStyle = { backgroundColor: "#26233a", borderRadius: 8, padding: 12, marginTop: 8, color: "#e0def4" };
+    const Action = RN.TouchableOpacity || RN.Pressable;
+
+    function paragraph(key, content) {
+      return React.createElement(RN.Text, { key, selectable: true, style: textStyle }, content);
     }
     function button(key, label, action) {
-      return React.createElement(RN.Pressable, { key, onPress: action, style: { padding: 13, backgroundColor: "#c4a7e7", borderRadius: 9, marginTop: 14 } },
-        React.createElement(RN.Text, { style: { color: "#191724", textAlign: "center", fontWeight: "bold" } }, label));
+      return React.createElement(Action, {
+        key,
+        accessible: true,
+        accessibilityRole: "button",
+        onPress: function () {
+          setPressCount(prev => prev + 1);
+          try { action(); }
+          catch (e) { setStatus("Button error: " + String(e).slice(0, 140)); }
+        },
+        style: { padding: 14, backgroundColor: "#c4a7e7", borderRadius: 9, marginTop: 14 }
+      }, React.createElement(RN.Text, { style: { color: "#191724", textAlign: "center", fontWeight: "bold" } }, label));
     }
     return React.createElement(RN.ScrollView, {
-      style: { flex: 1, backgroundColor: "#191724" }, contentContainerStyle: { padding: 18 }
+      style: { flex: 1, backgroundColor: "#191724" },
+      contentContainerStyle: { padding: 18, paddingBottom: 80 },
+      keyboardShouldPersistTaps: "always"
     },
-      React.createElement(RN.Text, { style: { color: "#e0def4", fontSize: 19, fontWeight: "bold" } }, "Rosé Pine Everywhere — V2 diagnostics"),
+      React.createElement(RN.Text, { style: { color: "#e0def4", fontSize: 19, fontWeight: "bold" } }, "Rosé Pine Everywhere — V3 diagnostics"),
+      paragraph("feedback", "BUTTON FEEDBACK: " + status + " | Taps recorded: " + pressCount),
+      button("test", "Test buttons (should count taps)", function () {
+        setStatus("The button works. This page received your tap.");
+      }),
       paragraph("registry", "Metro registry: " + stats.registry),
       paragraph("stats", "Registry entries: " + stats.total + " | Initialized: " + stats.initialized + " | Named components: " + stats.components),
       paragraph("matches", "Patched screens: " + (stats.matches.join(", ") || "NONE")),
-      paragraph("candidates", "Other screen-like component names: " + (stats.candidates.slice(0, 18).join(", ") || "NONE")),
+      paragraph("candidates", "Potential screen names (not confirmed): " + (stats.candidates.slice(0, 22).join(", ") || "NONE")),
       paragraph("errors", "Patch errors: " + (stats.errors.slice(0, 4).join("; ") || "none")),
-      button("scan", "Scan loaded screens again", function () {
+      button("scan", "Rescan loaded screens", function () {
         scan();
-        setRefresh(refresh + 1);
+        setScanCount(prev => prev + 1);
+        setStatus("Scan completed. Found " + stats.matches.length + " patch(es), " + stats.candidates.length + " potential names.");
       }),
-      paragraph("instructions", "Open your server/channel list once, then return here and tap Scan. This safely examines loaded modules without forcing new ones to load."),
-      React.createElement(RN.Text, { style: Object.assign({}, text, { marginTop: 24 }) }, "Wallpaper (HTTPS URL)"),
-      React.createElement(RN.TextInput, { style: input, value: url, onChangeText: setUrl, autoCapitalize: "none", multiline: true, placeholderTextColor: "#908caa" }),
+      paragraph("scanCount", "Manual rescans: " + scanCount),
+      paragraph("instructions", "Open the server/channel list once, then return here and tap Rescan. If patched screens stays NONE, the wallpaper is not being injected."),
+      React.createElement(RN.Text, { style: Object.assign({}, textStyle, { marginTop: 24 }) }, "Wallpaper (HTTPS URL)"),
+      React.createElement(RN.TextInput, {
+        style: inputStyle, value: url, onChangeText: setUrl,
+        autoCapitalize: "none", autoCorrect: false, multiline: true,
+        placeholderTextColor: "#908caa"
+      }),
       paragraph("overlayLabel", "Dark overlay opacity (0.0 to 0.85)"),
-      React.createElement(RN.TextInput, { style: input, value: opacity, onChangeText: setOpacity, keyboardType: "decimal-pad" }),
-      button("save", "Save wallpaper settings", function () {
-        if (!/^https:\/\//i.test(url.trim())) return log("Invalid wallpaper URL: HTTPS required");
-        try {
-          api.plugin.storage.wallpaperUrl = url.trim();
-          const n = Number(opacity);
-          api.plugin.storage.overlayOpacity = Number.isFinite(n) ? Math.max(0, Math.min(0.85, n)) : CONFIG.overlayOpacity;
-          log("Wallpaper settings saved. Reload Revenge to see updates.");
-        } catch (e) { log("Cannot save settings", e); }
+      React.createElement(RN.TextInput, {
+        style: inputStyle, value: opacity, onChangeText: setOpacity, keyboardType: "decimal-pad"
       }),
-      paragraph("disclaimer", "Experimental: even matching components may contain opaque internal views. Disable this plugin if the channel list behaves incorrectly.")
+      button("save", "Save wallpaper settings", function () {
+        if (!/^https:\/\/\S+$/i.test(url.trim())) {
+          setStatus("Not saved: enter a complete HTTPS wallpaper URL.");
+          return;
+        }
+        try {
+          if (!api || !api.plugin || !api.plugin.storage) {
+            setStatus("Not saved: plugin storage is unavailable in this Revenge build.");
+            return;
+          }
+          const n = Number(opacity);
+          if (!Number.isFinite(n)) {
+            setStatus("Not saved: overlay must be a number from 0 to 0.85.");
+            return;
+          }
+          api.plugin.storage.wallpaperUrl = url.trim();
+          api.plugin.storage.overlayOpacity = Math.max(0, Math.min(0.85, n));
+          setStatus("Settings saved. Reload Revenge to apply wallpaper changes.");
+        } catch (e) {
+          setStatus("Could not save: " + String(e).slice(0, 120));
+        }
+      }),
+      paragraph("disclaimer", "This is a diagnostic build. It does not guarantee channel-list wallpaper support; none of the expected screen components have been found on your build.")
     );
   }
 
