@@ -245,21 +245,22 @@ function decorateLoggerRows(packet, engine, processColor) {
             // Discord adds parentheses around this label itself.
             output.message.edited = "deleted";
         } else {
-            output.message.edited = "edited · " + entry.editCount + " saved";
+            // Let the client render the familiar (edited) badge; do not expose an edit count in chat.
+            output.message.edited = "edited";
         }
-        if (Array.isArray(message.content)) {
-            // Keep the latest message intact. Earlier versions follow it.
-            const tail = [];
-            if (edited) {
-                const earlier = entry.versions.slice(0, -1).slice(-3);
-                earlier.forEach((v, i) => {
-                    const content = v.contentKnown ? (v.content || "[No text]") : "[Text not received]";
-                    tail.push({ type: "text", content: "\nEarlier edit " + (i + 1) + ": " });
-                    tail.push({ type: "s", content: [{ type: "text", content: content.slice(0, 500) + (content.length > 500 ? "…" : "") }] });
-                });
-                tail.push({ type: "text", content: "\n[Full history: long-press → Message history, or /mlog]" });
-            }
-            output.message.content = message.content.concat(tail);
+        if (edited && Array.isArray(message.content) && Array.isArray(entry.versions)) {
+            // Vencord-like ordering: earlier versions first, latest message last.
+            // Text-only AST nodes are deliberate: don't parse stored text as mentions or links,
+            // and don't alter what Discord sends or the actual underlying message record.
+            const previous = entry.versions.slice(0, -1).filter(v => v && v.contentKnown);
+            const visible = previous.slice(-3);
+            const head = [];
+            visible.forEach(v => {
+                const source = String(v.content || "");
+                const excerpt = source.slice(0, 800) + (source.length > 800 ? "…" : "");
+                head.push({ type: "text", content: (excerpt || "[No text]") + " (edited)\n" });
+            });
+            if (head.length) output.message.content = head.concat(message.content);
         }
         count += 1;
         return output;
@@ -411,7 +412,7 @@ function createLoggerUI(api, runtime) {
                 toggle("logDeletes", "Log deleted messages"), toggle("logEdits", "Log edited messages"),
                 toggle("logDMs", "Capture DMs and group DMs"), toggle("logServers", "Capture servers and threads"),
                 toggle("keepDeleted", "Keep deleted messages in chat", "While the message remains in the client’s loaded history."),
-                toggle("inlineEdits", "Show earlier edits in chat", "Up to 3 earlier text snippets; open history for full versions."),
+                toggle("inlineEdits", "Show earlier edits in chat", "Compact earlier versions above the current message, Vencord-style; long-press for all versions."),
                 toggle("persist", "Save history across restarts", "Off by default, like Vencord. Saved text is not encrypted by this plugin."),
                 toggle("ignoreBots", "Ignore bots"), toggle("ignoreSelf", "Ignore my messages")
             ),

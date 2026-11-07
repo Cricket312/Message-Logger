@@ -1,15 +1,15 @@
 {
   "name": "Local Message Logger",
-  "description": "Classic beta: retain deleted messages, show edit history, and browse local DM/server logs. No remote logging.",
+  "description": "Classic beta: Vencord-style inline edits, deleted messages and local DM/server history. No remote logging.",
   "authors": [
     {
       "name": "Custom build"
     }
   ],
   "main": "index.js",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "vendetta": {
     "icon": "ic_message"
   },
-  "hash": "1533d556ed59bc95cd02f7eac6779bfdc318845bb54fc9d47f9b2968f5c9d6a1"
+  "hash": "b009c899be12ffdb3fed48e492677970bec2060e5dd544794c7423d0af61904d"
 }
